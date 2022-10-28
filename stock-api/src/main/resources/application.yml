@@ -1,0 +1,19 @@
+spring:
+  cloud:
+    stream:
+      default-binder: rabbit
+      default:
+        group: sender
+      bindings:
+        stocks:
+          destination: stocks-topic
+  rabbitmq:
+    host: b-27f17d4d-9343-4389-9f65-436289d2804b.mq.us-east-2.amazonaws.com
+    port: 5671
+    username: rabbit
+    password: runrabbitrun
+    ssl:
+      enabled: true
+
+finnhub:
+  api-key: ${FINNHUB_API_KEY}

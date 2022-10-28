@@ -1,0 +1,11 @@
+
+rabbitmq:
+  image: rabbitmq:management
+  ports:
+    - "5672:5672" # first numeber is external, second number is internal
+    - "15672:15672"
+
+# stock-api:
+#   image: stock-api
+#   ports:
+#     - "8080:8080"

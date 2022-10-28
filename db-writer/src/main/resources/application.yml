@@ -1,0 +1,30 @@
+server:
+  port: 8081
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: ${DB_DRIVER}
+  cloud:
+    function:
+      definition: stockReceived
+    stream:
+      default-binder: rabbit
+      default:
+        group: receiver
+      bindings:
+        stockReceived-in-0:
+          destination: stocks-topic
+  rabbitmq:
+    host: b-27f17d4d-9343-4389-9f65-436289d2804b.mq.us-east-2.amazonaws.com
+    port: 5671
+    username: rabbit
+    password: runrabbitrun
+    ssl:
+      enabled: true
+
+#  //        String dbUrl = environment.getProperty("spring.datasource.url");
+#  //        String dbUsername = environment.getProperty("finnhub.api-key");
+#  //        String dbPassword = environment.getProperty("finnhub.api-key");
