@@ -1,43 +1,64 @@
 
 
-apiVersion: v1
-kind: Service
-metadata:
-  name: stock-api-service
-spec:
-  type: NodePort
-  selector:
-    app: stock-api
-  ports:
-    - port: 8080
-      targetPort: 8080
-      nodePort: 30007
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: rabbit-service
-spec:
-  ports:
-    - protocol: TCP
-      port: 5672
-      targetPort: 5672
----
-apiVersion: v1
-kind: Endpoints
-metadata:
-  name: rabbit-service
-subsets:
-  - addresses:
-    - ip: "172.17.0.2"
-    ports:
-    - name: "rabbitmq"
-      port: 5672
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: stock-api-service
+#   namespace: stocks
+# spec:
+#   type: NodePort
+#   selector:
+#     app: stock-api
+#   ports:
+#     - port: 8080
+#       targetPort: 8080
+#       nodePort: 30007
+# ---
+
+
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: stock-api-service
+#   namespace: stocks
+# spec:
+#   type: NodePort
+#   selector:
+#     app: stock-api
+#   ports:
+#     - port: 8080
+#       targetPort: 8080
+#       nodePort: 30007
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: rabbit-service
+#   namespace: stocks
+# spec:
+#   clusterIP: None
+#   ports:
+#     - protocol: TCP
+#       port: 5672
+#       targetPort: 5672
+# ---
+# apiVersion: v1
+# kind: Endpoints
+# metadata:
+#   name: rabbit-service
+#   namespace: stocks
+# subsets:
+#   - addresses:
+#     - ip: 3.140.181.93
+#     ports:
+#     - name: "rabbitmq"
+#       port: 5672
 ---
 apiVersion: apps/v1
 kind: Deployment # Kubernetes resource kind we are creating
 metadata:
   name: stock-api
+  namespace: stocks
 spec:
   selector:
     matchLabels:
@@ -45,15 +66,65 @@ spec:
   replicas: 1 # Number of replicas that will be created for this deployment
   template:
     metadata:
+      namespace: stocks
       labels:
         app: stock-api
     spec:
+      serviceAccountName: stock-api-sa
       containers:
         - name: stock-api 
-          image: stock-api # Image that will be used to containers in the cluster
-          imagePullPolicy: Never
+          image: jpdoherty90/stock-api:latest # Image that will be used to containers in the cluster
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080 # The port that the container is running on in the cluster
           env:
+          - name: RABBIT_HOST
+            value: "b-27f17d4d-9343-4389-9f65-436289d2804b.mq.us-east-2.amazonaws.com"
+          - name: RABBIT_PORT
+            value: "5671"
+          - name: RABBIT_USERNAME
+            value: "rabbit"
+          - name: RABBIT_PASSWORD
+            value: "runrabbitrun"
           - name: FINNHUB_API_KEY
             value: "bulktlf48v6prr9i5thg"
+---
+apiVersion: apps/v1
+kind: Deployment # Kubernetes resource kind we are creating
+metadata:
+  name: db-writer
+  namespace: stocks
+spec:
+  selector:
+    matchLabels:
+      app: db-writer
+  replicas: 1 # Number of replicas that will be created for this deployment
+  template:
+    metadata:
+      namespace: stocks
+      labels:
+        app: db-writer
+    spec:
+      containers:
+        - name: db-writer 
+          image: jpdoherty90/db-writer:latest # Image that will be used to containers in the cluster
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081 # The port that the container is running on in the cluster
+          env:
+          - name: RABBIT_HOST
+            value: "b-27f17d4d-9343-4389-9f65-436289d2804b.mq.us-east-2.amazonaws.com"
+          - name: RABBIT_PORT
+            value: "5671"
+          - name: RABBIT_USERNAME
+            value: "rabbit"
+          - name: RABBIT_PASSWORD
+            value: "runrabbitrun"
+          - name: DB_URL
+            value: "jdbc:mariadb://stocks-db.cdm12ywy2rzy.us-east-2.rds.amazonaws.com:3306/grant_street"
+          - name: DB_DRIVER
+            value: "org.mariadb.jdbc.Driver"
+          - name: DB_USERNAME
+            value: "admin"
+          - name: DB_PASSWORD
+            value: "mariaroot"

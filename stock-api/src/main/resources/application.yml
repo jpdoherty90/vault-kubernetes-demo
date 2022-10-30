@@ -8,10 +8,10 @@ spring:
         stocks:
           destination: stocks-topic
   rabbitmq:
-    host: b-27f17d4d-9343-4389-9f65-436289d2804b.mq.us-east-2.amazonaws.com
-    port: 5671
-    username: rabbit
-    password: runrabbitrun
+    host: ${RABBIT_HOST}
+    port: ${RABBIT_PORT}
+    username: ${RABBIT_USERNAME}
+    password: ${RABBIT_PASSWORD}
     ssl:
       enabled: true
 

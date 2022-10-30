@@ -40,7 +40,7 @@ public class StockController {
         System.out.println(stock.toString());
 
         // Drop data on queue
-        System.out.println("Sending to topic:\n" + stock.toString());
+        System.out.println("SENDING TO TOPIC:\n" + stock.toString());
 
         streamBridge.send("stocks", stock);
 

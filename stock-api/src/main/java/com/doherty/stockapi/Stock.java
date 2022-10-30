@@ -1,5 +1,8 @@
 package com.doherty.stockapi;
 
+import lombok.ToString;
+
+@ToString
 public class Stock {
 
     public String country;
