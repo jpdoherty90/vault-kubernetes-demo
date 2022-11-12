@@ -1,0 +1,51 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stock-api
+spec:
+  selector:
+    matchLabels:
+      app: stock-api
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: 'true'
+        vault.hashicorp.com/role: 'stock-api-role'
+        vault.hashicorp.com/namespace: 'admin'
+        vault.hashicorp.com/agent-inject-secret-finnhub: 'api-keys/data/stocks'
+        vault.hashicorp.com/agent-inject-template-finnhub: |
+          {{ with secret "api-keys/data/stocks" -}}
+            export FINNHUB_API_KEY="{{ .Data.data.finnhubapikey }}"
+          {{- end }}
+        vault.hashicorp.com/agent-inject-secret-rabbit: 'rabbitmq/creds/stock-api-role'
+        vault.hashicorp.com/agent-inject-template-rabbit: |
+          {{ with secret "rabbitmq/creds/stock-api-role" -}}
+            export RABBIT_USERNAME="{{ .Data.username }}"
+            export RABBIT_PASSWORD="{{ .Data.password }}"
+          {{- end }}
+      labels:
+        app: stock-api
+    spec:
+      serviceAccountName: stock-api-sa
+      containers:
+        - name: stock-api 
+          image: jpdoherty90/stock-api:latest
+          command:
+            ['sh', '-c', 'source /vault/secrets/finnhub && source /vault/secrets/rabbit && java -jar /stock-api-0.0.1-SNAPSHOT.jar']
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+          - name: RABBIT_HOST
+            value: "b-<redacted>.mq.us-east-2.amazonaws.com"
+          - name: RABBIT_PORT
+            value: "5671"
+          # - name: RABBIT_USERNAME
+          #   value: ""
+          # - name: RABBIT_PASSWORD
+          #   value: ""
+          # - name: FINNHUB_API_KEY
+          #   value: ""
+

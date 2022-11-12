@@ -1,0 +1,57 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-writer
+spec:
+  selector:
+    matchLabels:
+      app: db-writer
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: 'true'
+        vault.hashicorp.com/role: 'db-writer-role'
+        vault.hashicorp.com/namespace: 'admin'
+        vault.hashicorp.com/agent-inject-secret-maria: 'database/creds/db-writer-role'
+        vault.hashicorp.com/agent-inject-template-maria: |
+          {{ with secret "database/creds/db-writer-role" -}}
+            export DB_USERNAME="{{ .Data.username }}"
+            export DB_PASSWORD="{{ .Data.password }}"
+          {{- end }}
+        vault.hashicorp.com/agent-inject-secret-rabbit: 'rabbitmq/creds/db-writer-role'
+        vault.hashicorp.com/agent-inject-template-rabbit: |
+          {{ with secret "rabbitmq/creds/db-writer-role" -}}
+            export RABBIT_USERNAME="{{ .Data.username }}"
+            export RABBIT_PASSWORD="{{ .Data.password }}"
+          {{- end }}
+      labels:
+        app: db-writer
+    spec:
+      serviceAccountName: db-writer-sa
+      containers:
+        - name: db-writer 
+          image: jpdoherty90/db-writer:latest
+          command:
+            ['sh', '-c', 'source /vault/secrets/maria && source /vault/secrets/rabbit && java -jar /db-writer-0.0.1-SNAPSHOT.jar']
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+          env:
+          - name: RABBIT_HOST
+            value: "b-<redacted>.mq.us-east-2.amazonaws.com"
+          - name: RABBIT_PORT
+            value: "5671"
+          # - name: RABBIT_USERNAME
+          #   value: ""
+          # - name: RABBIT_PASSWORD
+          #   value: ""
+          - name: DB_URL
+            value: "jdbc:mariadb://stocks-db.<redacted>.us-east-2.rds.amazonaws.com:3306/<db-name>"
+          - name: DB_DRIVER
+            value: "org.mariadb.jdbc.Driver"
+          # - name: DB_USERNAME
+          #   value: ""
+          # - name: DB_PASSWORD
+          #   value: ""

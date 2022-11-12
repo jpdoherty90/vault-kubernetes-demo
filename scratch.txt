@@ -1,0 +1,99 @@
+=======
+K/V
+=======
+
+Make sure you helm install with the Vault cluster's private IP address:
+helm install vault hashicorp/vault -f values.yaml
+
+Make sure kuberentes auth is configured:
+
+export TOKEN_REVIEW_JWT=$(kubectl get secret \
+   $(kubectl get serviceaccount vault -o jsonpath='{.secrets[0].name}') \
+   -o jsonpath='{ .data.token }' | base64 --decode)
+
+export KUBE_CA_CERT=$(kubectl get secret \
+   $(kubectl get serviceaccount vault -o jsonpath='{.secrets[0].name}') \
+   -o jsonpath='{ .data.ca\.crt }' | base64 --decode)
+
+export KUBE_HOST=$(kubectl config view --raw --minify --flatten \
+   -o jsonpath='{.clusters[].cluster.server}')
+
+vault write auth/kubernetes/config \
+  token_reviewer_jwt="$TOKEN_REVIEW_JWT" \
+  kubernetes_host="$KUBE_HOST" \
+  kubernetes_ca_cert="$KUBE_CA_CERT"
+
+Then make sure your kubernetes role is configured:
+vault write auth/kubernetes/role/stock-api-role \
+    bound_service_account_names=stock-api-sa \
+    bound_service_account_namespaces=default \
+    policies=stock-api-policy \
+    ttl=24h
+
+Make sure your policy is named right and has the correct permissions
+
+Make sure your k/v has a value in it 
+
+Now k/v should work.  You will not see the variable when you exec into the container because it was only set on the shell instance that ran the app.
+Later you can change app code to print these vars so you can debug by looking at app logs.
+k exec --stdin --tty $(k get po -o name | grep stock-api) -c stock-api -- /bin/sh
+k logs $(k get po -o name | grep stock-api) -c stock-api
+k logs $(k get po -o name | grep db-writer) -c db-writer
+k logs $(k get po -o name | grep stock-api) -c vault-agent-init
+
+
+
+=======
+RABBIT
+=======
+
+Make sure the rabbit config is updated:
+
+vault write rabbitmq/config/connection \
+    connection_uri="https://b-<redacted>.mq.us-east-2.amazonaws.com:15671" \
+    username="" \
+    password=""
+
+Make sure your rabbit role is set (LATER see if a different role name would work):
+vault write rabbitmq/roles/stock-api-role vhosts='{"/":{"write": ".*", "read": ".*"}}'
+vault write rabbitmq/roles/db-writer-role vhosts='{"/":{"write": ".*", "read": ".*"}}'
+
+Test your role out from the command line:
+vault read rabbitmq/creds/stock-api-role
+vault read rabbitmq/creds/db-writer-role
+
+Make sure your policy has the correct permissions.
+
+rabbitmqctl set_permissions -p vhost user ".*" ".*" ".*"
+
+
+=======
+MARIA
+=======
+
+Make sure your config is set:
+
+vault write database/config/maria-database \
+    plugin_name=mysql-database-plugin \
+    connection_url="admin:<password>@tcp(stocks-db.<redacted>.us-east-2.rds.amazonaws.com:3306)/" \
+    allowed_roles="db-writer-role" \
+    username="" \
+    password=""
+
+Create your role:
+
+vault write database/roles/db-writer-role \
+    db_name=maria-database \
+    creation_statements="CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';GRANT SELECT, INSERT ON *.* TO '{{name}}'@'%';" \
+    default_ttl="6h" \
+    max_ttl="24h"
+
+Then make sure your kubernetes role is configured:
+vault write auth/kubernetes/role/db-writer-role \
+    bound_service_account_names=db-writer-sa \
+    bound_service_account_namespaces=default \
+    policies=db-writer-policy \
+    ttl=24h
+
+k logs $(k get po -o name | grep db-writer) -c db-writer
+k logs $(k get po -o name | grep db-writer) -c vault-agent-init
