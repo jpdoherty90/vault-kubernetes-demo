@@ -14,11 +14,8 @@ public class StockController {
     @Autowired
     private Environment environment;
 
+    @Autowired
     private StreamBridge streamBridge;
-
-    public StockController(StreamBridge streamBridge) {
-        this.streamBridge = streamBridge;
-    }
 
     @GetMapping("/test")
     public String test() {
@@ -42,10 +39,14 @@ public class StockController {
         // Drop data on queue
         System.out.println("SENDING TO TOPIC:\n" + stock.toString());
 
-        streamBridge.send("stocks", stock);
+        sendToStreamBridge(stock);
 
         // Return data
         return stock;
+    }
+
+    public void sendToStreamBridge(Stock stock) {
+        streamBridge.send("stocks", stock);
     }
 
 

@@ -4,8 +4,10 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.ToString;
 
+import java.io.Serializable;
+
 @ToString
-public class Stock {
+public class Stock implements Serializable {
 
     private String country;
     private String currency;

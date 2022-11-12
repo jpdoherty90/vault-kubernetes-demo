@@ -21,6 +21,9 @@ public class MessageService {
     public Consumer<Stock> stockReceived() {
         return stock -> {
             System.out.println("Received: " + stock.toString());
+            if (stock.getTicker().equals("FAKETICKER")) {
+                return;
+            }
             try {
                 String url = environment.getProperty("spring.datasource.url");
                 String username = environment.getProperty("spring.datasource.username");

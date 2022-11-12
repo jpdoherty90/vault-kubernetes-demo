@@ -2,8 +2,10 @@ package com.doherty.stockapi;
 
 import lombok.ToString;
 
+import java.io.Serializable;
+
 @ToString
-public class Stock {
+public class Stock implements Serializable {
 
     public String country;
     public String currency;
